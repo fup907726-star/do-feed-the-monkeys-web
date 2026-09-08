@@ -1,30 +1,22 @@
 # do-feed-the-monkeys-web
 
-手机可测的网页原型。测的是设定里的日环，不是「3F → 楼梯 → 院子」。
+手机可测的网页原型。先出 3F home 住处，再坐进靠窗木桌的观察环。
 
 ## 测什么
 
-坐在 3F home 靠窗木桌前：
-
-1. 读灰窗社观察单 GW-OBS-001（周凯 / 顺达物流）
-2. 切三路下发监控（闸机 / 卸货区 / 走廊）
-3. 时间推进，可选轻喂短信
-4. 填三条观察题交差
-
-不出门，不下楼，不进院子。侦办室以后从这张单屏桌往外长。
+1. 等轴 3F 房间（对照 Linear「主角住处图」）：灰混凝土、暖黄吊灯、西窗木桌、北侧低床、右下楼梯井
+2. 点桌子进入灰窗社观察单 GW-OBS-001（周凯 / 顺达物流）
+3. 切三路监控、推进时间、可选轻喂、交差
+4. 可站起来回房间。楼梯 / 院子仍不下
 
 ## 怎么打开
 
-仓库是公开的。GitHub Pages 若已开：
-
 https://fup907726-star.github.io/do-feed-the-monkeys-web/
 
-Pages 未开时可用预览：
+Pages 未开时：
 
 https://htmlpreview.github.io/?https://github.com/fup907726-star/do-feed-the-monkeys-web/blob/main/index.html
 
-或把 `index.html` 发到自己能打开的静态托管。
-
 ## 和 Godot 正仓的关系
 
-正仓仍是私有的 `Do-Feed-the-Monkeys`。这里只用来手机测玩法。测过的流程再搬回 Godot。
+正仓仍是私有的 `Do-Feed-the-Monkeys`。这里只用来手机测玩法。测过的空间/流程再搬回 Godot。尺寸表在 Linear 文档「主角住处图」。
