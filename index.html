@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>灰窗 · GW-OBS-001</title>
+  <title>3F home · 灰窗</title>
   <style>
     :root {
       --bg: #1a1a18;
@@ -31,6 +31,22 @@
     header b { color: var(--amber); font-weight: 600; }
     #clock { font-variant-numeric: tabular-nums; color: var(--dim); }
     main { flex: 1; display: flex; flex-direction: column; padding: 10px; gap: 10px; }
+    #roomWrap {
+      flex: 1; min-height: 280px; position: relative;
+      background: #2a2a28; border: 1px solid #4a4840; border-radius: 8px; overflow: hidden;
+    }
+    #room { width: 100%; height: 100%; display: block; }
+    .hint {
+      position: absolute; left: 8px; right: 8px; bottom: 8px;
+      font-size: 12px; color: #d8d0c0; background: rgba(0,0,0,.45);
+      padding: 6px 8px; border-radius: 4px; pointer-events: none;
+    }
+    .room-btns { display: flex; gap: 6px; }
+    .room-btns button, .row button, .sheet button, #report button {
+      flex: 1; background: #241f1a; color: var(--ink);
+      border: 1px solid var(--line); padding: 10px 8px; font-size: 13px;
+    }
+    .room-btns button.primary, .row button.primary { border-color: var(--amber); color: var(--amber); }
     .desk {
       background: linear-gradient(#3a3228, #2a241c);
       border: 1px solid #4a4034;
@@ -48,7 +64,7 @@
       position: relative;
       overflow: hidden;
     }
-    canvas { width: 100%; height: 100%; display: block; }
+    canvas.mon { width: 100%; height: 100%; display: block; }
     .cam-label {
       position: absolute; top: 8px; left: 8px;
       font-size: 11px; color: #c9c4b0; background: rgba(0,0,0,.55);
@@ -62,11 +78,6 @@
     }
     .cams button.on { border-color: var(--amber); color: var(--amber); }
     .row { display: flex; gap: 6px; }
-    .row button, .sheet button, #report button {
-      flex: 1; background: #241f1a; color: var(--ink);
-      border: 1px solid var(--line); padding: 10px 8px; font-size: 13px;
-    }
-    .row button.primary { border-color: var(--amber); color: var(--amber); }
     .sheet, #report, #end {
       background: #f3ead4; color: #2a2418;
       padding: 12px; border-radius: 4px; font-size: 14px; line-height: 1.55;
@@ -81,22 +92,33 @@
 </head>
 <body>
   <header>
-    <div>3F home · 靠窗木桌 · <b>单屏</b></div>
+    <div id="hdr">3F home · 雾城混凝土 · <b>住处</b></div>
     <div id="clock">18:28</div>
   </header>
   <main>
-    <div id="intro" class="sheet">
+    <div id="home">
+      <div id="roomWrap">
+        <canvas id="room"></canvas>
+        <div class="hint" id="hint">点西窗木桌坐下。楼梯井在右下，先不走。</div>
+      </div>
+      <div class="room-btns" style="margin-top:8px">
+        <button id="lookBtn">看雾窗</button>
+        <button class="primary" id="sitBtn">坐到桌前</button>
+      </div>
+    </div>
+    <div id="intro" class="sheet hidden">
       <h2>灰窗社下发 · GW-OBS-001</h2>
       <p>对象：周凯，顺达物流仓库夜班。有人说他这周在躲催款。</p>
       <p>我们只要<strong>事实</strong>，不要你替他还钱。23:00 前交观察报告。</p>
       <p class="muted">三路已开：东门闸机 / 卸货区 / 宿舍走廊。无室内。不是邻居。</p>
       <div class="row" style="margin-top:10px">
-        <button class="primary" id="startBtn">坐到桌前开屏</button>
+        <button id="standBtn">离开桌子</button>
+        <button class="primary" id="startBtn">开屏</button>
       </div>
     </div>
     <div id="desk" class="desk hidden">
       <div class="screen">
-        <canvas id="cv"></canvas>
+        <canvas id="cv" class="mon"></canvas>
         <div class="cam-label" id="camName">CAM-02 卸货区</div>
         <div class="rec">● REC</div>
       </div>
@@ -109,6 +131,9 @@
         <button id="skipBtn">时间 +30 分</button>
         <button id="smsBtn">轻喂：匿名短信</button>
         <button class="primary" id="reportBtn">写观察报告</button>
+      </div>
+      <div class="row">
+        <button id="standBtn2">站起来回房间</button>
       </div>
     </div>
     <div id="report" class="hidden">
@@ -142,125 +167,7 @@
     </div>
     <div id="end" class="hidden"></div>
   </main>
-  <footer>网页测玩版 · 只测接单/看枪/交差。不做楼梯与院子。</footer>
-  <script>
-    const state = { minutes: 18*60+28, cam: "dock", fed: false, seenCall: false, leftGate: false, backHall: false, events: [] };
-    const clock = document.getElementById("clock");
-    const cv = document.getElementById("cv");
-    const ctx = cv.getContext("2d");
-    function hhmm(m) {
-      const h = Math.floor(m / 60) % 24;
-      const mm = m % 60;
-      return String(h).padStart(2,"0") + ":" + String(mm).padStart(2,"0");
-    }
-    function resize() {
-      const r = cv.parentElement.getBoundingClientRect();
-      cv.width = Math.floor(r.width * devicePixelRatio);
-      cv.height = Math.floor(r.height * devicePixelRatio);
-    }
-    window.addEventListener("resize", resize);
-    function drawCam() {
-      const w = cv.width, h = cv.height;
-      ctx.fillStyle = "#0d120e"; ctx.fillRect(0,0,w,h);
-      const t = state.minutes;
-      for (let i=0;i<80;i++) {
-        ctx.fillStyle = "rgba(180,200,160,0.08)";
-        ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2);
-      }
-      ctx.fillStyle = "#1a2318";
-      if (state.cam === "dock") {
-        ctx.fillRect(0, h*0.62, w, h*0.38);
-        ctx.fillStyle = "#2a2a22";
-        ctx.fillRect(w*0.08, h*0.28, w*0.55, h*0.34);
-        ctx.fillStyle = "#c9b27a";
-        const here = t >= 18*60+30 && t <= 21*60+20 && !(state.leftGate && t > 20*60+40);
-        if (here) {
-          ctx.fillRect(w*0.62, h*0.46, w*0.08, h*0.22);
-          if (t >= 18*60+50 && t <= 19*60+10) {
-            ctx.fillStyle = "#8ad0a0";
-            ctx.fillRect(w*0.70, h*0.48, 8, 8);
-            state.seenCall = true;
-          }
-        }
-      } else if (state.cam === "gate") {
-        ctx.fillRect(0, h*0.7, w, h*0.3);
-        ctx.fillStyle = "#3a4030";
-        ctx.fillRect(w*0.2, h*0.2, w*0.12, h*0.5);
-        ctx.fillRect(w*0.68, h*0.2, w*0.12, h*0.5);
-        const passing = (t >= 21*60 && t <= 21*60+8) || (state.fed && t >= 20*60+10 && t <= 20*60+18);
-        if (passing) {
-          ctx.fillStyle = "#c9b27a";
-          ctx.fillRect(w*0.46, h*0.48, w*0.07, h*0.2);
-          state.leftGate = true;
-        }
-      } else {
-        ctx.fillStyle = "#141816"; ctx.fillRect(0,0,w,h);
-        ctx.fillStyle = "#2c2a24";
-        ctx.fillRect(w*0.15, h*0.25, w*0.22, h*0.5);
-        ctx.fillRect(w*0.62, h*0.25, w*0.22, h*0.5);
-        const back = (!state.fed && t >= 21*60+5 && t <= 21*60+20);
-        if (back) {
-          ctx.fillStyle = "#c9b27a";
-          ctx.fillRect(w*0.64, h*0.48, w*0.07, h*0.22);
-          state.backHall = true;
-        }
-      }
-      ctx.fillStyle = "#8a9a7a";
-      ctx.font = (12 * devicePixelRatio) + "px monospace";
-      ctx.fillText("GW · " + hhmm(t) + " · " + state.cam, 16, h - 16);
-    }
-    function tickClock() {
-      clock.textContent = hhmm(state.minutes);
-      if (state.minutes >= 23*60) clock.textContent = "23:00 截止";
-    }
-    document.getElementById("startBtn").onclick = () => {
-      document.getElementById("intro").classList.add("hidden");
-      document.getElementById("desk").classList.remove("hidden");
-      resize(); drawCam();
-    };
-    document.querySelectorAll(".cams button").forEach(b => {
-      b.onclick = () => {
-        document.querySelectorAll(".cams button").forEach(x => x.classList.remove("on"));
-        b.classList.add("on");
-        state.cam = b.dataset.cam;
-        document.getElementById("camName").textContent =
-          state.cam === "gate" ? "CAM-01 东门闸机" :
-          state.cam === "dock" ? "CAM-02 卸货区" : "CAM-03 宿舍走廊";
-        drawCam();
-      };
-    });
-    document.getElementById("skipBtn").onclick = () => {
-      if (state.minutes >= 23*60) return;
-      state.minutes = Math.min(23*60, state.minutes + 30);
-      tickClock(); drawCam();
-    };
-    document.getElementById("smsBtn").onclick = () => {
-      state.fed = true; state.backHall = false;
-      alert("短信已出去。他可能更早离开，也可能不敢回宿舍。本单不要求喂。");
-    };
-    document.getElementById("reportBtn").onclick = () => {
-      document.getElementById("desk").classList.add("hidden");
-      document.getElementById("report").classList.remove("hidden");
-    };
-    document.getElementById("backBtn").onclick = () => {
-      document.getElementById("report").classList.add("hidden");
-      document.getElementById("desk").classList.remove("hidden");
-      resize(); drawCam();
-    };
-    document.getElementById("submitBtn").onclick = () => {
-      const a = [q1.value,q2.value,q3.value];
-      if (a.some(x => !x)) { alert("三条都要有答案。"); return; }
-      document.getElementById("report").classList.add("hidden");
-      const end = document.getElementById("end");
-      end.classList.remove("hidden");
-      const truth = [
-        state.backHall ? "镜头里：回过宿舍" : "镜头里：没看到回宿舍",
-        state.seenCall ? "镜头里：卸货区有长通话" : "镜头里：没抓住长通话",
-        (state.leftGate && !state.backHall) ? "镜头里：离场且未回" : "镜头里：未同时满足离场+未回"
-      ];
-      end.innerHTML = "<h2>已交 · 低报酬 · 暴露" + (state.fed ? "略升" : "极低") + "</h2><p>你的填写：" + a.join(" ／ ") + "</p><p class='muted'>" + truth.join(" ／ ") + "</p><p>灰窗社不跟你对答案。事实在档案里，下一单另说。</p>";
-    };
-    tickClock();
-  </script>
+  <footer>网页测玩 · DJI-114 先出 3F 住处，再坐进单屏。楼梯/院子不下。</footer>
+  <script src="app.js"></script>
 </body>
 </html>
